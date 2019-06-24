@@ -1,0 +1,16 @@
+{
+  "name": "cognito-token-decorator-lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "upload": "scripts/update-lambda.sh",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^3.0.1",
+    "aws-sdk": "^2.468.0"
+  }
+}
