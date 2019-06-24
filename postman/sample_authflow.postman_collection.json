@@ -1,0 +1,232 @@
+{
+	"variables": [],
+	"info": {
+		"name": "PoC_Demo",
+		"_postman_id": "49c0f928-8f33-f15c-0efb-918b3468e58a",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Mock API GW Without Headers",
+			"request": {
+				"url": {
+					"raw": "{{use your invoke URL found in api-gw console}}",
+					"protocol": "https",
+					"host": [
+						"execute-api",
+						"us-west-2",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"dev",
+						"mock"
+					],
+					"query": [
+						{
+							"key": "redirect_uri",
+							"value": "http://localhost:3000/home",
+							"equals": true,
+							"description": "",
+							"disabled": true
+						}
+					],
+					"variable": []
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"description": ""
+			},
+			"response": []
+		},
+    {
+      "name": "Mock API GW With Invalid Token",
+      "request": {
+        "url": {
+          "raw": "{{use your invoke URL found in api-gw console}}",
+          "protocol": "https",
+          "host": [
+            "execute-api",
+            "us-west-2",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "dev",
+            "mock"
+          ],
+          "query": [
+            {
+              "key": "redirect_uri",
+              "value": "http://localhost:3000/home",
+              "equals": true,
+              "description": "",
+              "disabled": true
+            }
+          ],
+          "variable": []
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "description": ""
+          },
+          {
+            "key": "Authorization",
+            "value": "{{auth-token}}",
+            "description": ""
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{key-value}}",
+            "description": ""
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "description": ""
+      },
+      "response": []
+    },
+    {
+      "name": "Get Token With Credentials IDP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Amz-Target",
+            "value": "AWSCognitoIdentityProviderService.InitiateAuth"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/x-amz-json-1.1"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n   \"AuthFlow\" : \"USER_PASSWORD_AUTH\",\n   \"AuthParameters\" : {\n      \"USERNAME\" : \"{{some-user}}\",\n      \"PASSWORD\" : \"{{some-password}}\"\n   },\n   \"ClientId\" : \"{{external-user-pool-client-id}}\"\n}"
+        },
+        "url": {
+          "raw": "https://cognito-idp.us-west-2.amazonaws.com/",
+          "protocol": "https",
+          "host": [
+            "cognito-idp",
+            "us-west-2",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Auth Challenge Change Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Amz-Target",
+            "value": "AWSCognitoIdentityProviderService.RespondToAuthChallenge"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/x-amz-json-1.1"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n   \"ChallengeName\": \"NEW_PASSWORD_REQUIRED\",\n   \"ChallengeResponses\": { \n\t  \"USERNAME\" : \"{{some-user}}\",\n      \"NEW_PASSWORD\" : \"{{NEW_PASSWORD}}\",\n      \"userAttributes.name\" : \"{{some_name}}\",\n      \"userAttributes.phone_number\" : \"{{+11231231234}}\"\n},\n   \"ClientId\": \"{{external-user-pool-client-id}}\",\n   \"Session\": \"hyBIGDfNrWBgRVtKdQZrOjw5BzAzb5k1JaTs4xdb8YvvmhCfo1cEM8WvejlwP-RAF9ZAT0I27jzxIywYpscGQigST4P-25dhzsLfC7LxkAxW5Ixq5z8H_ftsv26Se2xw9XslZA6lR-GVQ0irLplCC5eQQ9MIZbZB04MTX0FMTV7b0LrNjObk6mxIOhDZzaAc9ltrdRYqI4Ys00BlwJ9PrLNDSz3-Vl4KbWId_mQk-8k7LotnoYABSXEEQQbukfpe2yt5XQyZ1N1qHQXwmVJTOAuSR8yArulMdkxUa3DIeqfhGhz6lS3p_3LQR3dvoT30XyGi_J1O7DlhehRq8ePc4EO7tE0j4qgIjloz0KDlUVJ2cgaFi-OYkU9bfFEcqxZFfBKw38u1aMIjB_AVOZcqIsW54aFuvrDioXBqgkTioUy7Pi6QS2R_JuAY2naZ0X-nw6Q7qWPZx1cV4XPshaIzhie3mqOrjSyBZHaiTdnrkwoxY6ntkM5TVZk_P6o0tOA3NqgMptWnwdf7zP4laPnmfWjlXgPVieCqmcgQW1QiPfJxTMtQgWmCJnd2iAs1NJBKzjeDvmvHuv3Yp4sEj5X_830QL5kFj-6X5MpeZLTNghRF8bymAt_sDFMNlGEkUbSBtyE1zOjNm0vQhF20WA8tE3_ZCg-3RkIqC1ETOC_TsKOAatE4zbEXZ9cVnNC_-saTl5OLhkQqWJ5_jwKM5CFSip0ribJe0Ed90J9O7fPgfOCtOo77Dmz0wXVSeTGnRsCDm4CkfAsayMR96N7t6Zsx8uOT_SiHkG3sKkQSdfan3kIly1Vz6mphiDzOEbM0npRuLtu8kfJgQQFHzGOUr1e_7T6t6O8\"\n}"
+        },
+        "url": {
+          "raw": "https://cognito-idp.us-west-2.amazonaws.com/",
+          "protocol": "https",
+          "host": [
+            "cognito-idp",
+            "us-west-2",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Mock API GW With Valid Token",
+      "request": {
+        "url": {
+          "raw": "{{use your invoke URL found in api-gw console}}",
+          "protocol": "https",
+          "host": [
+            "execute-api",
+            "us-west-2",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "dev",
+            "mock"
+          ],
+          "query": [
+            {
+              "key": "redirect_uri",
+              "value": "http://localhost:3000/home",
+              "equals": true,
+              "description": "",
+              "disabled": true
+            }
+          ],
+          "variable": []
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "description": ""
+          },
+          {
+            "key": "Authorization",
+            "value": "{{auth-token}}",
+            "description": ""
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{key-value}}",
+            "description": ""
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "description": ""
+      },
+      "response": []
+    }
+	]
+}
