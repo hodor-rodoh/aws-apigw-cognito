@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "aws-cf API GW"
+
+Parameters:
+  apiGatewayStageName:
+    Type: "String"
+    AllowedPattern: "^[a-z0-9]+$"
+    Default: "aws-cf"
+
+  CognitoStackName:
+    Type: "String"
+    Default: "CognitoStack"
+
+  APIGWLogLevel:
+    Type: "String"
+    Default: "INFO"
+
+  VPCLinkStackName:
+    Type: "String"
+    Default: "VPCLinkStack"
+
+Resources:
+  ApiGatewayRestApi:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: "aws-cf-proxy-api"
+      Description: "aws-cf API GW"
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: !Sub ${AWS::StackName}-cognito-authorizer
+      IdentitySource: method.request.header.Authorization
+      ProviderARNs:
+        - Fn::ImportValue:
+            !Sub "${CognitoStackName}-CognitoUserPoolArn"
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      Type: COGNITO_USER_POOLS
+
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: 'mock'
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: true
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+      HttpMethod: OPTIONS
+      Integration:
+        ConnectionType: INTERNET
+        IntegrationResponses:
+          - ResponseTemplates:
+              application/json: "{\"message\": \"OK\"}"
+            SelectionPattern: '2\d{2}'
+            StatusCode: "200"
+          - ResponseTemplates:
+              application/json: "{\"message\": \"Internal Server Error\"}"
+            SelectionPattern: '5\d{2}'
+            StatusCode: "500"
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates:
+          application/json: "{\"statusCode\": $input.json('$.statusCode'), \"message\": $input.json('$.message')}"
+        Type: MOCK
+        TimeoutInMillis: 29000
+      MethodResponses:
+        - ResponseModels:
+            application/json: !Ref MockMethodModel
+          StatusCode: "200"
+        - ResponseModels:
+            application/json: !Ref MockMethodModel
+          StatusCode: "500"
+      OperationName: 'mock'
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref ApiGatewayRestApi
+
+  MockMethodModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      ContentType: 'application/json'
+      RestApiId: !Ref ApiGatewayRestApi
+      Schema: {}
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: MockMethodApiKey
+
+  ApiUsagePlan:
+    Type: "AWS::ApiGateway::UsagePlan"
+    Properties:
+      ApiStages:
+        -
+          ApiId: !Ref ApiGatewayRestApi
+          Stage: !Ref ApiGatewayStage
+      Description: !Join [" ", [{"Ref": "AWS::StackName"}, "usage plan"]]
+      Quota:
+        Limit: 2000
+        Period: MONTH
+      Throttle:
+        BurstLimit: 10
+        RateLimit: 10
+      UsagePlanName: !Join ["", [{"Ref": "AWS::StackName"}, "-usage-plan"]]
+
+  ApiUsagePlanKey:
+    Type: "AWS::ApiGateway::UsagePlanKey"
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref ApiUsagePlan
+
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    DependsOn: ApiGatewayAccountSetting
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment
+      Description: Mock API Stage
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName:
+        Ref: apiGatewayStageName
+      Variables:
+        vpcLinkId:
+          Fn::ImportValue:
+            !Sub "${VPCLinkStackName}-VpcLinkId"
+      MethodSettings:
+        -
+          LoggingLevel: !Sub "${APIGWLogLevel}"
+          MetricsEnabled: true
+          DataTraceEnabled: true
+          HttpMethod: "*"
+          ResourcePath: "/*"
+      AccessLogSetting:
+        Format: "$context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] context.httpMethod $context.resourcePath $context.protocol $context.status $context.responseLength $context.requestId"
+        DestinationArn:
+          !Sub
+            - "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:API-Gateway-Execution-Logs_${APIGWId}/${apiGatewayStageName}"
+            - { APIGWId: !Ref ApiGatewayRestApi }
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethod
+    Properties:
+      Description: Mock API Deployment
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayCloudWatchAlarm4XX:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/ApiGateway
+      Dimensions:
+        -
+          Name: "ApiName"
+          Value: "aws-cf-proxy-api"
+        -
+          Name: "Stage"
+          Value: !Sub "${apiGatewayStageName}"
+      MetricName: 4XXError
+      Statistic: Sum
+      AlarmName: !Sub "ApiGateway4XXErrorRate_${apiGatewayStageName}"
+      AlarmDescription: "Alarm for 4XX's"
+      EvaluationPeriods: 1
+      Period: 60
+      Threshold: 10
+      TreatMissingData: notBreaching
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+
+  ApiGatewayCloudWatchAlarm5XX:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/ApiGateway
+      Dimensions:
+        -
+          Name: "ApiName"
+          Value: "aws-cf-proxy-api"
+        -
+          Name: "Stage"
+          Value: !Sub "${apiGatewayStageName}"
+      MetricName: 5XXError
+      Statistic: Sum
+      AlarmName: !Sub "ApiGateway5XXErrorRate_${apiGatewayStageName}"
+      AlarmDescription: "Alarm for 5XX's"
+      EvaluationPeriods: 1
+      Period: 60
+      Threshold: 10
+      TreatMissingData: notBreaching
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+
+  ApiGatewayPushCloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [apigateway.amazonaws.com]
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+      RoleName: "ApiGatewayPushCloudWatchLogsRole"
+
+  ApiGatewayAccountSetting:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayPushCloudWatchLogsRole.Arn
+
+Outputs:
+  ApiGatewayRestApiArn:
+    Description: ARN for Api Gateway Rest Api
+    Value: !Ref ApiGatewayRestApi
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiGatewayRestApi
+
+  MockMethodModelId:
+    Description: ARN for Mock Method Model
+    Value: !Ref MockMethodModel
+    Export:
+      Name: !Sub ${AWS::StackName}-MockMethodModel

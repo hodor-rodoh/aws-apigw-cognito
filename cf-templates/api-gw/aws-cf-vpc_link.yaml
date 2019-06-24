@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "aws-cf vpc link"
+
+Resources:
+  VPCLink:
+    Type: AWS::ApiGateway::VpcLink
+    Properties:
+      Name: !Sub ${AWS::StackName}-VpcLink
+      TargetArns:
+        - Fn::ImportValue: <NLB Value>
+
+Outputs:
+  VPCLinkID:
+    Description: ID for VPCLink
+    Value: !Ref VPCLink
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcLinkId
