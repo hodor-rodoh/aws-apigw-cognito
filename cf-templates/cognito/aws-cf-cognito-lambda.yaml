@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Cognito lambda pre token generation"
+
+Parameters:
+  DynamoDBStackName:
+    Type: "String"
+    Default: "DynamoDBStack"
+
+  S3CodeBucket:
+    Type: "String"
+    Default: "<your-bucket>"
+
+Resources:
+  LambdaDynamoDBFullAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        -
+          Effect: "Allow"
+          Principal:
+            Service:
+              - "lambda.amazonaws.com"
+          Action:
+            - "sts:AssumeRole"
+      RoleName: "LambdaDynamoDBFullAccessRole"
+
+  LambdaDynamoDBFullAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "LambdaDynamoDBFullAccessPolicy"
+      Roles:
+        -
+          Ref: "LambdaDynamoDBFullAccessRole"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Sid: AllowLambdaToWriteToCloudWatch
+            Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource: "*"
+          -
+            Sid: AllowLambdaFullAccessToDynamoDB
+            Effect: Allow
+            Action:
+              - dynamodb:*
+            Resource: "*"
+
+  PreTokenFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-PreTokenFunction"
+      Environment:
+        Variables:
+          AttributesDynamoDBTableName:
+            Fn::ImportValue:
+              !Sub "${DynamoDBStackName}-dynamodb-table"
+      Handler: "src/index.handler"
+      Role: !GetAtt LambdaDynamoDBFullAccessRole.Arn
+      Code:
+        S3Bucket: !Sub "${S3CodeBucket}"
+        S3Key: "cognito-token-decorator-lambda.zip"
+      Runtime: "nodejs8.10"
+
+Outputs:
+  PreTriggerLambdaName:
+    Value: !Ref PreTokenFunction
+    Export:
+      Name: !Sub ${AWS::StackName}-PreTokenFunction

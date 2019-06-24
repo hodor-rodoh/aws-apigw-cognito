@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "dynamoDB for additional attributes"
+
+Resources:
+  DynamoDBAdditionalAttributes:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: !Sub ${AWS::StackName}-additional-attributes-table
+      AttributeDefinitions:
+        -
+          AttributeName: "username"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "username"
+          KeyType: "HASH"
+
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+Outputs:
+  DynamoDBArn:
+    Value: !GetAtt DynamoDBAdditionalAttributes.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-dynamodb-arn
+  TableName:
+    Value: !Ref DynamoDBAdditionalAttributes
+    Export:
+      Name: !Sub ${AWS::StackName}-dynamodb-table
