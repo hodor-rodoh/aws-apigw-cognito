@@ -25,7 +25,7 @@
 ```
 ### Table of Contents
 
-* [Cognito + API Gateway](#cognito + api_gateway)
+* [Cognito + API Gateway](#cognito_api_gateway)
   * [About the Repository](#about_the_repository)
 
 # Cognito + API Gateway
