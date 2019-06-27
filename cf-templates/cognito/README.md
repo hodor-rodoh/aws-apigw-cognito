@@ -186,7 +186,7 @@ PolicyDocument:
 
 1. Install the AWS Command Line Interface. More information at https://aws.amazon.com/cli/.
 
-1. Open your command shell and navigate to the directory containing the *SampleInfrastructure.template.yaml* file.
+1. Open your command shell and navigate to the directory containing the the template.yaml files.
 
 1. Run the following command to package the local artifacts that the AWS CloudFormation template references:
 
